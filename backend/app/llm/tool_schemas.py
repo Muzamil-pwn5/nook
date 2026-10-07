@@ -26,15 +26,15 @@ def get_tool_schemas() -> list[dict[str, Any]]:
                         "type": ["string", "null"],
                         "description": (
                             "Optional product search text, such as "
-                            "'lounge chair', 'oak table', or 'floor lamp'."
+                            "'loafers', 'silk scarf', or 'sunglasses'."
                         ),
                     },
                     "category": {
                         "type": ["string", "null"],
                         "description": (
                             "Optional product category, such as "
-                            "'Seating', 'Tables', 'Lighting', 'Storage', "
-                            "or 'Decor'."
+                            "'Shoes', 'Accessories', 'Dresses', 'Bags', "
+                            "'Jewellery', or 'Perfume'."
                         ),
                     },
                     "max_price": {

@@ -34,8 +34,8 @@ const COLORS = ["Black", "Ivory", "Red", "Cobalt", "Sage", "Sand", "Blush", "Cho
 const CLOTHING = new Set(["Clothing", "Dresses", "Tops", "Bottoms", "Outerwear"]);
 const SHOES = new Set(["Shoes", "Sneakers"]);
 export const CATEGORY_NAMES = CATEGORY_DEFS.map(([name]) => name);
-export const DEMO_PRODUCTS = CATEGORY_DEFS.flatMap(([category, singular, names, materials], categoryIndex) => Array.from({ length: 24 }, (_, index) => {
-  const id = categoryIndex * 20 + index + 1;
+export const DEMO_PRODUCTS = CATEGORY_DEFS.flatMap(([category, singular, names, materials], categoryIndex) => Array.from({ length: 50 }, (_, index) => {
+  const id = categoryIndex * 50 + index + 1;
   const color = COLORS[(index + categoryIndex) % COLORS.length];
   const sizes = CLOTHING.has(category) ? ["XS", "S", "M", "L", "XL"] : SHOES.has(category) ? ["36", "37", "38", "39", "40", "41", "42"] : ["One size"];
   const priceBase = category === "Jewellery" ? 120 : category === "Perfume" ? 96 : category === "Beauty" ? 48 : SHOES.has(category) ? 165 : 88;
