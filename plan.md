@@ -1,4 +1,4 @@
-# Agentic storefront refinement plan
+# Plety exact landing page plan
 
 ## Required outcomes
 
@@ -7,33 +7,32 @@
 - Persist the agent conversation inside each API session so follow-up messages remain conversational.
 - Keep tool calls, provider errors, approval metadata, and orchestration details out of the end-user chat transcript.
 - Use natural final assistant responses from the configured Groq/Google provider, with an honest unavailable state when the hosted provider is not configured.
-- Improve the homepage visual hierarchy with the existing product imagery in the collection while keeping the hero focused on the animated sculptural object and removing unnecessary hero photography.
-- Rework the interface so it does not read as an AI-generated demo: use a dark, restrained editorial shell, custom stroke-based wordmark mark, human commerce copy, sticky navigation with scroll state, mobile navigation, scroll-reveal transitions, marquee masking, accordion FAQ, and a considered contact/footer finish.
+- Replace the old Morrow & Form commerce shell with the uploaded Plety landing page specification: pure black background, white typography, transparent-to-blurred sticky navigation, exact hero copy, hero video, API badge, dual CTA, masked trusted-by marquee, two video-backed feature mockups, FAQ accordion, and video-backed footer CTA.
+- Keep the existing live agent backend intact and wire its real conversation into the Plety “Ask anything…” chat mockup; no customer-facing mock responses.
 
 ## Implementation approach
 
 - Extend `LLMAgentRunner.run` to accept an existing `AgentConversation` while preserving its current call signature for tests and other callers.
 - Store the conversation object in `backend/app/api/agent.py` session state and update it after normal turns and approval resumes.
 - Keep API responses compatible, but let the frontend render only the public `response` field and map non-public workflow states to friendly copy.
-- Replace frontend local matching in `App.jsx` with one initialized `/agent/session` and `/agent/chat` calls for every user message.
-- Reuse the existing Unsplash-backed product images from `demoData.js` in the collection; keep the hero image-free and focused on the animated sculptural object. Adapt the uploaded Plety brief's dark black/white system, smooth scrolling, masked marquee, mobile menu, reveal animation, FAQ accordion, and footer CTA without replacing the Morrow & Form brand or live-commerce behavior.
-- Seed the backend agent catalog with fashion categories that match the storefront, including Shoes, Accessories, Dresses, Bags, Jewellery, Perfume, Sneakers, and Beauty.
+- Use a single React landing page in `frontend/src/App.jsx` with a FadeInUp wrapper, exact anchor sections (`about`, `features`, `faq`, `contact`), responsive navigation, real chat composer, FAQ grid-row animation, and exact footer credit layout.
+- Use the supplied SceneAI video URLs for the hero, AI chat mockup, AI transcription mockup, and footer background; use only CSS/SVG for the Plety logo and trusted-brand marks.
 - Validate with backend pytest, frontend lint/build, and the running FastAPI preview.
 
 ## Design direction
 
-- **Movement:** dark editorial commerce / neo-modernist product journal, informed by the uploaded Plety brief but grounded in Morrow & Form.
-- **Core principles:** quiet confidence, generous negative space, tactile imagery, and restrained motion; the interface should feel authored rather than generated.
-- **Color philosophy:** near-black gives the collection room to breathe, warm white keeps it human, and acid lime acts as one ownable signal for availability, interaction, and live status.
-- **Layout paradigm:** asymmetrical hero with copy anchored left and layered visual evidence right; editorial sections rather than centered card grids, with a split FAQ and an open footer CTA.
-- **Signature elements:** a custom stroke-based M mark, thin mono labels, circular crosshair geometry, masked marquees, and collection image cards with index markers.
-- **Interaction philosophy:** direct and calm; the concierge answers in plain language while implementation details remain invisible.
-- **Animation:** preserve cursor parallax, use scroll progress, reveal-on-scroll, hover lift, button shimmer, a responsive sticky header, mobile menu reveal, masked marquee, and CSS-grid FAQ expansion; respect reduced-motion settings.
-- **Typography:** Manrope for utility and headlines, Playfair Display italic for editorial emphasis, DM Mono for metadata and status—not decorative over-labeling.
-- **Brand essence:** a considered AI-assisted collection for people who want useful recommendations without robotic shopping flows. Personality: considered, observant, quietly capable.
-- **Brand voice:** “Things worth keeping close.” / “Let’s find the right direction.” Keep AI implementation language out of customer-facing copy; call the experience a personal edit.
-- **Wordmark:** replace the old text-in-circle mark with a minimal geometric stroke M that can stand alone beside the Morrow & Form wordmark.
-- **Signature color:** acid lime used as a precise live/status/action signal, not a fill-everything accent.
+- **Movement:** sleek dark SaaS landing page / modern product launch.
+- **Core principles:** exact hierarchy, generous negative space, high-contrast typography, and restrained glassmorphism.
+- **Color philosophy:** pure black and white form the canvas; gray supports reading; yellow/green badges provide semantic feature accents without muddying the system.
+- **Layout paradigm:** centered hero followed by alternating two-column feature rows, a constrained FAQ, and a four-column footer.
+- **Signature elements:** stroke-based Plety logo, masked brand marquee, rounded video mockups, pill CTAs, and plus-to-close FAQ controls.
+- **Interaction philosophy:** fast, clear, responsive; nav links scroll to anchors, mobile menu closes after selection, the chat card talks to the real agent, and feature buttons return users to chat.
+- **Animation:** 1000ms FadeInUp reveal from translate-y-10/opacity-0, 30-second marquee, smooth scrolling, sticky-nav blur after 20px, FAQ grid-template-rows transition, and reduced-motion support.
+- **Typography:** DM Sans/Manrope for UI and headings, Playfair Display italic for the word “decisions.” and footer “everything?”.
+- **Brand essence:** Plety is the intelligence layer for clear decisions. Personality: clear, capable, fast.
+- **Brand voice:** “The intelligence layer for clear decisions.” / “Speed, scale, and smarts — deployed.”
+- **Wordmark:** custom geometric stroke-based P mark beside the Plety wordmark.
+- **Signature color:** white interaction surfaces with restrained yellow/green feature accents.
 
 ## Project structure
 

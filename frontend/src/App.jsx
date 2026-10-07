@@ -1,168 +1,94 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { agentClient } from "./api/agentClient";
-import { CATEGORY_NAMES, DEMO_MESSAGES, DEMO_PRODUCTS } from "./data/demoData";
-import { Icon } from "./components/Icons";
 import "./index.css";
 
-const categories = ["All pieces", ...CATEGORY_NAMES];
+const HERO_VIDEO = "https://cdn.sceneai.art/Hero%20Section%20Video/50b4f304-cdca-4e12-8735-580d225834be.mp4";
+const CHAT_VIDEO = "https://cdn.sceneai.art/Hero%20Section%20Video/1bcc8fa3-37f6-4c53-8591-0347e4c7f8ac.mp4";
+const TRANSCRIPTION_VIDEO = "https://cdn.sceneai.art/Hero%20Section%20Video/736fd4a0-70ac-4f44-9633-55769ead6aca.mp4";
+
 const faqItems = [
-  ["Can I ask for a specific colour or size?", "Yes. Tell the concierge what you have in mind and it can narrow the collection by category, colour, size, price, and availability."],
-  ["Is the collection available in real time?", "The concierge checks the connected catalogue before it recommends or prepares an order. It will never present a made-up availability as confirmed."],
-  ["What happens when I add something to my bag?", "Your bag is a private shortlist for this visit. You can review it with the concierge before any order is prepared."],
-  ["Do you keep my conversation?", "The conversation is held in a temporary session so the concierge can understand follow-up questions. Operational details stay behind the interface."],
-  ["Can I speak to a person?", "The collection is designed to start with a useful first edit. If you need a human follow-up, use the contact links below."],
+  ["Is my data safe?", "Yes. Your conversation is handled in a private session and the interface never exposes internal orchestration, provider details, or operational metadata."],
+  ["Can Plety connect to my existing tools?", "The hosted agent is designed around controlled tools and provider-neutral reasoning. Ask the concierge what is available in the current workspace."],
+  ["How does the AI chat work?", "Send a natural-language request in the chat card. The live agent reasons through the request, uses approved tools when needed, and returns a conversational answer."],
+  ["Can I use Plety on mobile?", "Yes. The navigation, feature cards, chat composer, FAQ, and footer are responsive and designed for touch-first use."],
+  ["Do I need to install anything?", "No. Plety runs in the browser and the hosted experience is ready to use without a local development setup."],
 ];
 
-function money(value) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+function FadeInUp({ children, className = "", delay = 0 }) {
+  return <div className={`fade-up ${className}`} style={{ "--delay": `${delay}ms` }}>{children}</div>;
 }
 
-function useReveal(key) {
-  useEffect(() => {
-    const items = document.querySelectorAll(".reveal");
-    const observer = new IntersectionObserver((entries) => entries.forEach((entry) => entry.isIntersecting && entry.target.classList.add("is-visible")), { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
-    items.forEach((item) => observer.observe(item));
-    return () => observer.disconnect();
-  }, [key]);
+function Logo() {
+  return <a className="plety-logo" href="#about" aria-label="Plety home"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 25V7h8.2a5.2 5.2 0 0 1 0 10.4H7M20 7v18M20 7h4.1a4 4 0 0 1 0 8H20" /></svg><span>Plety</span></a>;
 }
 
-function Wordmark({ light = false }) {
-  return <button className={`wordmark ${light ? "wordmark--light" : ""}`} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="Morrow & Form home">
-    <svg className="wordmark__mark" viewBox="0 0 28 28" aria-hidden="true"><path d="M5 20V8l6 7 6-7v12M17 8l6 4v8" /></svg>
-    <span>Morrow <em>&</em> Form</span>
-  </button>;
-}
+function ArrowIcon() { return <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M10 4l6 6-6 6" /></svg>; }
+function PlusIcon() { return <span className="plus-icon" aria-hidden="true" />; }
+function MicIcon() { return <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="3" width="6" height="10" rx="3" /><path d="M4 10a6 6 0 0 0 12 0M10 16v2M7 18h6" /></svg>; }
+function WaveIcon() { return <span className="wave-icon"><i /><i /><i /><i /><i /><i /><i /></span>; }
 
-function Header({ view, setView, bagCount, onConcierge }) {
+function Nav({ onGetStarted }) {
   const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
-    const update = () => setScrolled(window.scrollY > 20);
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
+    const handle = () => setScrolled(window.scrollY > 20);
+    handle(); window.addEventListener("scroll", handle, { passive: true });
+    return () => window.removeEventListener("scroll", handle);
   }, []);
-  const go = (id) => { setMenuOpen(false); document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); };
-  const home = () => { setMenuOpen(false); setView("home"); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const close = () => setOpen(false);
+  const start = () => { close(); onGetStarted(); };
   return <>
-    <header className={`site-header ${scrolled ? "is-scrolled" : ""}`}>
-      <Wordmark />
-      <nav className="site-nav" aria-label="Primary navigation">
-        <button className={view === "home" ? "is-active" : ""} onClick={home}>Index</button>
-        <button className={view === "catalog" ? "is-active" : ""} onClick={() => { setView("catalog"); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Objects</button>
-        <button onClick={() => go("point-of-view")}>Point of view</button>
-        <button onClick={() => go("faq")}>FAQ</button>
-      </nav>
-      <div className="header-actions">
-        <button className="concierge-link" onClick={onConcierge}><span className="status-pip" /> Personal edit</button>
-        <button className="bag-button" aria-label={`Open bag, ${bagCount} items`}><span>Bag</span><b>{String(bagCount).padStart(2, "0")}</b></button>
-        <button className={`mobile-nav ${menuOpen ? "is-open" : ""}`} onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen}><span /><span /></button>
-      </div>
+    <header className={`plety-nav ${scrolled ? "is-scrolled" : ""}`}>
+      <div className="nav-inner"><Logo /><nav className="nav-links" aria-label="Primary navigation"><a href="#about">About</a><a href="#features">Features</a><a href="#faq">FAQ</a><a href="#contact">Contact</a></nav><div className="nav-actions"><button className="nav-cta" onClick={start}>Get started <ArrowIcon /></button><button className={`hamburger ${open ? "is-open" : ""}`} onClick={() => setOpen((value) => !value)} aria-label={open ? "Close menu" : "Open menu"} aria-expanded={open}><span /><span /><span /></button></div></div>
     </header>
-    {menuOpen && <div className="mobile-menu"><button onClick={home}>Index</button><button onClick={() => { setView("catalog"); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Objects</button><button onClick={() => go("point-of-view")}>Point of view</button><button onClick={() => go("faq")}>FAQ</button><button className="mobile-menu__cta" onClick={() => { setMenuOpen(false); onConcierge(); }}>Open personal edit <span>↗</span></button></div>}
+    {open && <div className="mobile-nav-menu"><a href="#about" onClick={close}>About</a><a href="#features" onClick={close}>Features</a><a href="#faq" onClick={close}>FAQ</a><a href="#contact" onClick={close}>Contact</a><button onClick={start}>Get started <ArrowIcon /></button></div>}
   </>;
 }
 
-function ProductVisual({ product, large = false }) {
-  return <div className={`product-visual ${large ? "product-visual--large" : ""}`}><img src={product.image} alt={`${product.name} product photograph`} loading={large ? "eager" : "lazy"} /><span className="product-visual__index">{String(product.id).padStart(2, "0")}</span><span className="product-visual__veil" /></div>;
+function BrandLogo({ name }) {
+  return <span className="brand-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V6l5 6 5-6v12M14 6l6 4v8" /></svg>{name}</span>;
 }
 
-function ProductCard({ product, index, onSelect, onAdd }) {
-  return <article className="product-card reveal" style={{ "--delay": `${(index % 4) * 80}ms` }}>
-    <button className="product-card__image" onClick={() => onSelect(product)} aria-label={`View ${product.name}`}><ProductVisual product={product} /><span className="card-hover">View piece <Icon name="arrow" size={14} /></span></button>
-    <div className="product-card__meta"><div><span className="product-card__category">{product.category} / {product.material}</span><h3>{product.name}</h3></div><strong>{money(product.price)}</strong></div>
-    <div className="product-card__foot"><span>{product.color} · {product.sizes?.join(" / ")}</span><button onClick={() => onAdd(product)} aria-label={`Add ${product.name} to bag`}><Icon name="plus" size={15} /></button></div>
-  </article>;
+function Marquee() {
+  const logos = ["Springfield", "Orbitc", "Cloud", "Amster", "Nexus"];
+  return <section className="trust-strip"><p>Trusted by teams building what comes next</p><div className="marquee-window"><div className="brand-marquee">{[...logos, ...logos, ...logos, ...logos].map((logo, index) => <BrandLogo key={`${logo}-${index}`} name={logo} />)}</div></div></section>;
 }
 
-function Concierge({ open, onClose, messages, input, setInput, onSend, busy, connection }) {
-  if (!open) return null;
-  return <div className="concierge-drawer" role="dialog" aria-modal="true" aria-label="Morrow personal edit">
-    <div className="drawer__veil" onClick={onClose} />
-    <aside className="drawer__panel">
-      <div className="drawer__head"><div><span className="kicker">MORROW / PERSONAL EDIT</span><h2>A second opinion.</h2></div><button className="drawer-close" onClick={onClose} aria-label="Close concierge">×</button></div>
-      <p className="drawer__intro">Tell us what you are looking for. The edit can search the collection, check availability, and prepare a considered order for your approval.</p>
-      <div className="drawer__status"><span className="status-pip" /> {connection === "live" ? "Available now" : connection === "offline" ? "Temporarily unavailable" : "Finding the collection"}</div>
-      <div className="drawer__messages">{messages.map((message) => <div key={message.id} className={`drawer-message drawer-message--${message.role}`}><span>{message.role === "assistant" ? "M" : "You"}</span><p>{message.text}</p></div>)}{busy && <div className="drawer-message drawer-message--assistant"><span>M</span><p className="typing"><i /><i /><i /></p></div>}</div>
-      <div className="drawer__suggestions"><button onClick={() => setInput("Find me something for a long day")}>For a long day</button><button onClick={() => setInput("Show me something under $300")}>Under $300</button></div>
-      <form className="drawer__composer" onSubmit={(event) => { event.preventDefault(); onSend(); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about the collection…" aria-label="Ask the personal edit" /><button disabled={!input.trim() || busy} aria-label="Send"><Icon name="arrow" size={16} /></button></form>
-    </aside>
-  </div>;
+function ChatMockup({ messages, input, setInput, onSend, busy, onMic }) {
+  return <div className="feature-mockup chat-mockup"><video className="mockup-video" autoPlay muted loop playsInline src={CHAT_VIDEO} /><div className="video-shade" /><div className="floating-chat-card"><div className="chat-card-top"><span className="live-dot" /> Plety chat <span className="card-status">Live</span></div><div className="chat-chips"><span>Create image</span><span>Summarize</span><span>Analyze</span></div><div className="chat-history">{messages.map((message) => <div className={`mini-message mini-message--${message.role}`} key={message.id}>{message.text}</div>)}{busy && <div className="mini-message mini-message--assistant typing"><i /><i /><i /></div>}</div><form className="chat-composer" onSubmit={(event) => { event.preventDefault(); onSend(); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask anything…" aria-label="Ask Plety anything" /><button type="button" onClick={onMic} className="icon-button" aria-label="Use microphone"><MicIcon /></button><button className="send-button" disabled={!input.trim() || busy} aria-label="Send"><ArrowIcon /></button></form></div></div>;
 }
 
-function ProductModal({ product, onClose, onAdd }) {
-  if (!product) return null;
-  return <div className="product-modal" role="dialog" aria-modal="true" aria-label={product.name}><div className="modal__veil" onClick={onClose} /><div className="modal__panel"><button className="drawer-close" onClick={onClose} aria-label="Close product">×</button><div className="modal__visual"><ProductVisual product={product} large /></div><div className="modal__copy"><span className="kicker">OBJECT {String(product.id).padStart(2, "0")} / {product.category}</span><h2>{product.name}</h2><p className="modal__tagline">{product.tagline}</p><p>{product.description}</p><dl><div><dt>Material</dt><dd>{product.material}</dd></div><div><dt>Availability</dt><dd>{product.stock_quantity > 5 ? "In the studio" : "Few remaining"}</dd></div><div><dt>Edition</dt><dd>{product.edition}</dd></div><div><dt>Colour</dt><dd>{product.colors?.join(" / ")}</dd></div><div><dt>Sizes</dt><dd>{product.sizes?.join(" / ")}</dd></div></dl><div className="modal__buy"><strong>{money(product.price)}</strong><button className="button button--dark" onClick={() => { onAdd(product); onClose(); }}>Add to bag <Icon name="arrow" size={15} /></button></div></div></div></div>;
+function TranscriptionMockup() {
+  return <div className="feature-mockup transcription-mockup"><video className="mockup-video" autoPlay muted loop playsInline src={TRANSCRIPTION_VIDEO} /><div className="video-shade" /><div className="floating-transcript-card"><div className="transcript-top"><button className="play-button" aria-label="Play transcription"><span /></button><div><strong>11:06 AM – Chris</strong><small>Team sync / 32 min</small></div><span className="transcript-more">•••</span></div><div className="transcript-wave"><WaveIcon /><span>02:48</span></div><p>We need to make the next decision clear, then give the team room to move.</p><span className="transcript-cursor" /></div></div>;
 }
 
-function Hero({ onExplore, onConcierge }) {
-  const art = useRef(null);
-  const move = (event) => { const rect = art.current?.getBoundingClientRect(); if (!rect) return; const x = ((event.clientX - rect.left) / rect.width - .5) * 2; const y = ((event.clientY - rect.top) / rect.height - .5) * 2; art.current.style.setProperty("--mx", `${x * 8}deg`); art.current.style.setProperty("--my", `${y * -8}deg`); art.current.style.setProperty("--px", `${x * 18}px`); art.current.style.setProperty("--py", `${y * 18}px`); };
-  const leave = () => { if (!art.current) return; ["--mx", "--my", "--px", "--py"].forEach((name, index) => art.current.style.setProperty(name, ["0deg", "0deg", "0px", "0px"][index])); };
-  return <section className="hero" onMouseMove={move} onMouseLeave={leave}>
-    <div className="hero__grid" aria-hidden="true" /><div className="hero__copy"><span className="hero__badge"><span className="status-pip" /> Live collection / 2026</span><h1>Things worth<br /><i>keeping close.</i></h1><p>A quieter way to find what fits. Clothing, fragrance, and small objects chosen for the life around them.</p><div className="hero__actions"><button className="button button--light" onClick={onExplore}>Browse the edit <Icon name="arrow" size={15} /></button><button className="link-button" onClick={onConcierge}>Ask for a direction <span>↗</span></button></div></div>
-    <div className="hero__stage" ref={art}><div className="hero__halo" /><img src="/hero-object.svg" alt="Abstract sculptural object from the Morrow and Form collection" className="hero__object" /><span className="hero__note hero__note--top">A study in<br />useful beauty</span><span className="hero__note hero__note--bottom">Move through<br />the collection</span><span className="hero__crosshair" /></div>
-    <div className="hero__foot"><span>Scroll to wander</span><span className="scroll-line" /><span>01 / 04</span></div>
-  </section>;
+function FeatureCopy({ badge, title, children, onGetStarted, tone = "yellow" }) {
+  return <div className="feature-copy"><span className={`feature-badge feature-badge--${tone}`}>✦ {badge}</span><h2>{title}</h2><p>{children}</p><button className="text-cta" onClick={onGetStarted}>Get started <ArrowIcon /></button></div>;
 }
 
-function IntroSection() {
-  return <section id="point-of-view" className="statement reveal"><div className="statement__label"><span className="kicker">POINT OF VIEW</span><span className="statement__line" /></div><p>We believe the things around us should do more than perform. They should <em>change the temperature of a room,</em> make a ritual feel deliberate, and earn their place over time.</p></section>;
+function FAQ() {
+  const [open, setOpen] = useState(-1);
+  return <section id="faq" className="faq-section"><FadeInUp><h2>We’ve got answers</h2></FadeInUp><FadeInUp delay={80}><div className="faq-box">{faqItems.map(([question, answer], index) => <div className={`faq-row ${open === index ? "is-open" : ""}`} key={question}><button onClick={() => setOpen(open === index ? -1 : index)} aria-expanded={open === index}><span>{question}</span><PlusIcon /></button><div className="faq-answer"><div><p>{answer}</p></div></div></div>)}</div></FadeInUp></section>;
 }
 
-function FAQSection() {
-  const [open, setOpen] = useState(0);
-  return <section id="faq" className="faq-section"><div className="faq-heading reveal"><span className="kicker">THE SHORT ANSWER</span><h2>Good to know.</h2></div><div className="faq-list reveal">{faqItems.map(([question, answer], index) => <div className={`faq-item ${open === index ? "is-open" : ""}`} key={question}><button onClick={() => setOpen(open === index ? -1 : index)} aria-expanded={open === index}><span>{question}</span><i /></button><div className="faq-answer"><p>{answer}</p></div></div>)}</div></section>;
-}
-
-function Footer({ onConcierge }) {
-  return <footer id="contact" className="site-footer"><div className="footer__cta reveal"><span className="kicker">WHEN YOU NEED A STARTING POINT</span><h2>Let’s find the<br /><i>right direction.</i></h2><button className="button button--light" onClick={onConcierge}>Open the personal edit <Icon name="arrow" size={15} /></button></div><div className="footer__grid"><div><Wordmark light /><p>Considered things for an intentional life.</p></div><div><span className="footer__label">Explore</span><a href="#point-of-view">Point of view</a><a href="#objects">The collection</a><a href="#faq">FAQ</a></div><div><span className="footer__label">Connect</span><a href="mailto:hello@morrowandform.com">Email</a><a href="#contact">Instagram</a><a href="#contact">Journal</a></div><div><span className="footer__label">A note</span><p>Useful, not noisy.<br />Always a little considered.</p></div></div><div className="footer__bottom"><span>© 2026 Morrow & Form</span><span>Made for the things that stay.</span></div></footer>;
+function Footer({ onGetStarted }) {
+  return <footer id="contact" className="plety-footer"><video className="footer-video" autoPlay muted loop playsInline src={HERO_VIDEO} /><div className="footer-shade" /><div className="footer-inner"><FadeInUp><div className="footer-cta"><h2>Ready to automate <em>everything?</em></h2><div className="footer-buttons"><button className="button button--white" onClick={onGetStarted}>Get started <ArrowIcon /></button><a className="button button--dark" href="#features">Learn more <ArrowIcon /></a></div></div></FadeInUp><div className="footer-links"><div className="footer-brand"><Logo /><p>Speed, scale, and smarts — deployed.</p></div><div><span>Product</span><a href="#about">About</a><a href="#features">Pricing</a><a href="#features">Changelog</a><a href="#contact">Contact</a></div><div><span>Legal</span><a href="#contact">Terms of service</a><a href="#contact">Privacy policy</a><a href="#contact">404</a></div><div><span>Connect</span><a href="#contact">Instagram</a><a href="#contact">YouTube</a><a href="#contact">LinkedIn</a><a href="#contact">Twitter / X</a></div></div><div className="footer-bottom"><span>© 2026 Plety. All rights reserved</span><i>•</i><span>by <b>Re-text</b></span><i>•</i><span>Made in <b>Gemini</b></span></div></div></footer>;
 }
 
 function App() {
-  const [view, setView] = useState("home");
-  const [products] = useState(DEMO_PRODUCTS);
-  const [filter, setFilter] = useState("All pieces");
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [bag, setBag] = useState([]);
-  const [conciergeOpen, setConciergeOpen] = useState(false);
-  const [messages, setMessages] = useState(DEMO_MESSAGES);
+  const chatRef = useRef(null);
+  const [sessionId, setSessionId] = useState(null);
+  const [messages, setMessages] = useState([{ id: "welcome", role: "assistant", text: "Tell me what you’re working through." }]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [connection, setConnection] = useState("demo");
-  const [sessionId, setSessionId] = useState(null);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  useReveal(`${view}-${products.length}`);
-  useEffect(() => {
-    let frame = 0;
-    const updateProgress = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => { const max = document.documentElement.scrollHeight - window.innerHeight; setScrollProgress(max > 0 ? (window.scrollY / max) * 100 : 0); }); };
-    updateProgress(); window.addEventListener("scroll", updateProgress, { passive: true }); window.addEventListener("resize", updateProgress);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", updateProgress); window.removeEventListener("resize", updateProgress); };
-  }, []);
-  useEffect(() => {
-    let active = true;
-    Promise.all([agentClient.health(), agentClient.createSession()]).then(([, session]) => { if (!active) return; setSessionId(session.session_id); setConnection("live"); }).catch(() => { if (active) setConnection("offline"); });
-    return () => { active = false; };
-  }, []);
-  const filtered = useMemo(() => products.filter((product) => { const haystack = `${product.name} ${product.category} ${product.color} ${product.material} ${product.sizes?.join(" ")}`.toLowerCase(); return (filter === "All pieces" || product.category === filter) && (!query.trim() || haystack.includes(query.toLowerCase().trim())); }), [filter, products, query]);
-  const featuredProducts = useMemo(() => ["Dresses", "Shoes", "Perfume", "Bags"].map((category) => products.find((product) => product.category === category)).filter(Boolean), [products]);
-  const addToBag = (product) => setBag((items) => [...items, product]);
-  const explore = () => { setView("catalog"); setTimeout(() => document.getElementById("objects")?.scrollIntoView({ behavior: "smooth" }), 50); };
+  const [connection, setConnection] = useState("connecting");
+  useEffect(() => { let active = true; Promise.all([agentClient.health(), agentClient.createSession()]).then(([, session]) => { if (!active) return; setSessionId(session.session_id); setConnection("live"); }).catch(() => active && setConnection("offline")); return () => { active = false; }; }, []);
+  const scrollToChat = () => { document.getElementById("features")?.scrollIntoView({ behavior: "smooth" }); setTimeout(() => chatRef.current?.focus(), 600); };
   const sendMessage = async () => {
-    const text = input.trim(); if (!text || busy) return; setInput(""); setMessages((items) => [...items, { id: `user-${Date.now()}`, role: "user", text, time: "now" }]); setBusy(true);
-    try {
-      if (!sessionId) throw new Error("The personal edit is still connecting.");
-      const result = await agentClient.chat(sessionId, text); setConnection(result?.agent === "llm" ? "live" : "offline");
-      const responseText = result?.response && result?.type !== "provider_unavailable" ? result.response : result?.type === "provider_unavailable" ? "The personal edit is unavailable right now. Please try again in a moment." : result?.type === "approval_required" ? "I’ve prepared that request and kept the operational details private. If you’d like me to continue, say so and I’ll take the next step." : "I’m still considering the best direction. Tell me a little more about what you need.";
-      setMessages((items) => [...items, { id: `assistant-${Date.now()}`, role: "assistant", text: responseText, time: "now" }]);
-    } catch { setMessages((items) => [...items, { id: `assistant-${Date.now()}`, role: "assistant", text: "I’m having trouble reaching the personal edit right now. Please try again in a moment.", time: "now" }]); } finally { setBusy(false); }
+    const text = input.trim(); if (!text || busy) return; setInput(""); setMessages((items) => [...items, { id: `user-${Date.now()}`, role: "user", text }]); setBusy(true);
+    try { if (!sessionId) throw new Error("Not connected"); const result = await agentClient.chat(sessionId, text); setConnection(result?.agent === "llm" ? "live" : "offline"); const response = result?.response || "I’m ready when you are. Tell me a little more."; setMessages((items) => [...items, { id: `assistant-${Date.now()}`, role: "assistant", text: response }]); } catch { setMessages((items) => [...items, { id: `assistant-${Date.now()}`, role: "assistant", text: "I’m having trouble reaching Plety right now. Please try again." }]); } finally { setBusy(false); }
   };
-  return <div className="storefront"><div className="scroll-progress" style={{ "--progress": `${scrollProgress}%` }} /><Header view={view} setView={setView} bagCount={bag.length} onConcierge={() => setConciergeOpen(true)} />
-    {view === "home" ? <main><Hero onExplore={explore} onConcierge={() => setConciergeOpen(true)} /><IntroSection /><section id="objects" className="featured-section"><div className="section-heading reveal"><div><span className="kicker">THE EDIT / FOUR PIECES</span><h2>Wear the good<br /><i>often.</i></h2></div><button className="link-button" onClick={() => setView("catalog")}>See the full edit <span>↗</span></button></div><div className="featured-grid">{featuredProducts.map((product, index) => <ProductCard key={product.id} product={product} index={index} onSelect={setSelected} onAdd={addToBag} />)}</div></section><section className="marquee-section" aria-label="Collection principles"><div className="marquee"><span>USEFUL BEAUTY</span><i>✦</i><span>QUIET INSISTENCE</span><i>✦</i><span>OBJECTS WITH INTENT</span><i>✦</i><span>USEFUL BEAUTY</span><i>✦</i><span>QUIET INSISTENCE</span><i>✦</i></div></section><section className="concierge-banner reveal"><div><span className="kicker">A LITTLE HELP, WHEN NEEDED</span><h2>Not sure where<br />to begin?</h2></div><div><p>Describe the mood, the room, or the ritual. The personal edit will make the first move.</p><button className="button button--dark" onClick={() => setConciergeOpen(true)}>Start a conversation <Icon name="arrow" size={15} /></button></div></section><FAQSection /></main> : <main className="catalog-page"><section className="catalog-hero"><span className="kicker">THE COMPLETE COLLECTION / {products.length} PIECES</span><h1>Find your<br /><i>everyday extraordinary.</i></h1><p>Clothing, fragrance and considered accessories chosen for the way they move with you and live in the room.</p></section><section id="objects" className="catalog-list"><div className="filter-row"><label className="catalog-search"><Icon name="search" size={14} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search colour, size, category…" aria-label="Search catalogue" /></label>{categories.map((category) => <button key={category} className={filter === category ? "is-active" : ""} onClick={() => setFilter(category)}>{category}</button>)}<span className="filter-count">{filtered.length} objects</span></div><div className="catalog-grid">{filtered.map((product, index) => <ProductCard key={product.id} product={product} index={index} onSelect={setSelected} onAdd={addToBag} />)}</div></section></main>}
-    <Footer onConcierge={() => setConciergeOpen(true)} /><Concierge open={conciergeOpen} onClose={() => setConciergeOpen(false)} messages={messages} input={input} setInput={setInput} onSend={sendMessage} busy={busy} connection={connection} /><ProductModal product={selected} onClose={() => setSelected(null)} onAdd={addToBag} />
-    {bag.length > 0 && <div className="bag-toast"><span><b>{bag.length}</b> piece{bag.length > 1 ? "s" : ""} in your bag</span><button onClick={() => setConciergeOpen(true)}>Review with personal edit <Icon name="arrow" size={14} /></button></div>}
-  </div>;
+  return <div className="plety-app"><Nav onGetStarted={scrollToChat} /><main><section id="about" className="plety-hero"><video className="hero-video" autoPlay muted loop playsInline src={HERO_VIDEO} /><div className="hero-overlay" /><FadeInUp className="hero-content"><span className="hero-badge">✦ Announcing API 2.0</span><h1>The intelligence layer<br />for clear <em>decisions.</em></h1><p>Our platform integrates seamlessly into your stack to deliver real-time understanding, not just predictions.</p><div className="hero-buttons"><button className="button button--white" onClick={scrollToChat}>Get started <ArrowIcon /></button><a className="button button--dark" href="#features">Learn more <ArrowIcon /></a></div></FadeInUp><div className="hero-bottom"><span>Scroll to explore</span><span className="hero-line" /><span className={`connection-label connection-label--${connection}`}><i /> {connection === "live" ? "Live system" : connection === "offline" ? "Offline" : "Connecting"}</span></div></section><Marquee /><section id="features" className="features-section"><div className="feature-row"><FadeInUp className="feature-copy-wrap"><FeatureCopy badge="AI chat" title="Where speed meets intelligent conversation." onGetStarted={scrollToChat}>A conversational AI assistant that understands your questions, provides intelligent answers, and helps you get things done fast — from casual chats to complex tasks.</FeatureCopy></FadeInUp><FadeInUp delay={100}><ChatMockup messages={messages} input={input} setInput={setInput} onSend={sendMessage} busy={busy} onMic={() => setInput((value) => value || "Can you help me think through ")} /></FadeInUp></div><div className="feature-row feature-row--reverse"><FadeInUp><TranscriptionMockup /></FadeInUp><FadeInUp delay={100} className="feature-copy-wrap"><FeatureCopy badge="AI transcription" tone="green" title="Turn speech into text with speed and precision." onGetStarted={scrollToChat}>Automatically convert speech into accurate, editable text in real time. Perfect for meetings, interviews, voice notes, and more, powered by advanced speech recognition technology.</FeatureCopy></FadeInUp></div></section><FAQ /></main><Footer onGetStarted={scrollToChat} /></div>;
 }
 
 export default App;
