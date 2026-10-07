@@ -1,4 +1,4 @@
-# Plety exact landing page plan
+# Nook furniture marketplace dashboard plan
 
 ## Required outcomes
 
@@ -7,32 +7,32 @@
 - Persist the agent conversation inside each API session so follow-up messages remain conversational.
 - Keep tool calls, provider errors, approval metadata, and orchestration details out of the end-user chat transcript.
 - Use natural final assistant responses from the configured Groq/Google provider, with an honest unavailable state when the hosted provider is not configured.
-- Replace the old Morrow & Form commerce shell with the uploaded Plety landing page specification: pure black background, white typography, transparent-to-blurred sticky navigation, exact hero copy, hero video, API badge, dual CTA, masked trusted-by marquee, two video-backed feature mockups, FAQ accordion, and video-backed footer CTA.
-- Keep the existing live agent backend intact and wire its real conversation into the Plety “Ask anything…” chat mockup; no customer-facing mock responses.
+- Replace the prior AI/SaaS landing pages with a real responsive furniture e-commerce dashboard inspired by the supplied Dribbble Furniture Marketplace shot: warm neutral canvas, product-first hierarchy, immersive furniture photography, room browsing, collection filters, wishlist, bag, product details, mobile bottom navigation, and a secondary style assistant.
+- Keep the existing live agent backend intact and surface its real conversation through the style assistant; do not show implementation details or mock AI responses.
 
 ## Implementation approach
 
 - Extend `LLMAgentRunner.run` to accept an existing `AgentConversation` while preserving its current call signature for tests and other callers.
 - Store the conversation object in `backend/app/api/agent.py` session state and update it after normal turns and approval resumes.
 - Keep API responses compatible, but let the frontend render only the public `response` field and map non-public workflow states to friendly copy.
-- Use a single React landing page in `frontend/src/App.jsx` with a FadeInUp wrapper, exact anchor sections (`about`, `features`, `faq`, `contact`), responsive navigation, real chat composer, FAQ grid-row animation, and exact footer credit layout.
-- Use the supplied SceneAI video URLs for the hero, AI chat mockup, AI transcription mockup, and footer background; use only CSS/SVG for the Plety logo and trusted-brand marks.
+- Use a responsive React storefront in `frontend/src/App.jsx` with a fixed desktop sidebar, sticky search topbar, warm editorial welcome hero, room cards, furniture product grid, filters/search, functional product modal, cart drawer, wishlist state, assistant drawer, and mobile bottom navigation.
+- Use curated furniture photography from Unsplash with rounded image cards, warm sage/terracotta accents, compact commerce metadata, and responsive touch-friendly controls.
 - Validate with backend pytest, frontend lint/build, and the running FastAPI preview.
 
 ## Design direction
 
-- **Movement:** sleek dark SaaS landing page / modern product launch.
-- **Core principles:** exact hierarchy, generous negative space, high-contrast typography, and restrained glassmorphism.
-- **Color philosophy:** pure black and white form the canvas; gray supports reading; yellow/green badges provide semantic feature accents without muddying the system.
-- **Layout paradigm:** centered hero followed by alternating two-column feature rows, a constrained FAQ, and a four-column footer.
-- **Signature elements:** stroke-based Plety logo, masked brand marquee, rounded video mockups, pill CTAs, and plus-to-close FAQ controls.
-- **Interaction philosophy:** fast, clear, responsive; nav links scroll to anchors, mobile menu closes after selection, the chat card talks to the real agent, and feature buttons return users to chat.
-- **Animation:** 1000ms FadeInUp reveal from translate-y-10/opacity-0, 30-second marquee, smooth scrolling, sticky-nav blur after 20px, FAQ grid-template-rows transition, and reduced-motion support.
-- **Typography:** DM Sans/Manrope for UI and headings, Playfair Display italic for the word “decisions.” and footer “everything?”.
-- **Brand essence:** Plety is the intelligence layer for clear decisions. Personality: clear, capable, fast.
-- **Brand voice:** “The intelligence layer for clear decisions.” / “Speed, scale, and smarts — deployed.”
-- **Wordmark:** custom geometric stroke-based P mark beside the Plety wordmark.
-- **Signature color:** white interaction surfaces with restrained yellow/green feature accents.
+- **Movement:** minimal furniture marketplace / warm editorial product catalog.
+- **Core principles:** product-first, calm, tactile, and immediately shoppable.
+- **Color philosophy:** bone paper and warm white make photography feel at home; sage communicates calm and terracotta provides a human purchase/assistant signal.
+- **Layout paradigm:** app-like desktop shell with sidebar + sticky toolbar, then a full-width feature card, room discovery, and a dense catalog grid.
+- **Signature elements:** rounded furniture photography, sage feature panel, compact product badges, floating quick-view affordances, and a terracotta assistant signal.
+- **Interaction philosophy:** browsing should feel effortless: filter, search, save, inspect, add to bag, and ask for help without leaving the collection.
+- **Animation:** image scale on hover, quick-view reveal, drawer/modal transitions, smooth anchor scrolling, horizontal room scroller on mobile, and reduced-motion support.
+- **Typography:** DM Sans for the commerce interface with Playfair Display italic used sparingly for editorial warmth.
+- **Brand essence:** Nook is considered furniture for everyday rituals. Personality: warm, observant, quietly useful.
+- **Brand voice:** “Make room for better living.” / “Furniture with a point of view, chosen for the way you actually live.”
+- **Wordmark:** a compact rounded lowercase n mark beside the Nook wordmark.
+- **Signature color:** sage green for the seasonal edit, with terracotta for saved/helpful actions.
 
 ## Project structure
 
