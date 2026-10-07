@@ -1,0 +1,12 @@
+{
+  "name": "agentic-commerce",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev -- --host 0.0.0.0 --port 3000",
+    "build": "npm --prefix frontend run build",
+    "lint": "npm --prefix frontend run lint"
+  },
+  "packageManager": "npm@10.9.2"
+}
