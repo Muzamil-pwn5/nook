@@ -1,43 +1,33 @@
-# Nook furniture marketplace dashboard plan
+# Nook agentic commerce workspace plan
+
+## Product scope
+
+Nook is an agentic commerce workspace, not a customer-service landing page. It combines a searchable product catalogue with AI agents that understand shopper intent, recommend products, prepare order actions, and surface operational signals.
 
 ## Required outcomes
 
-- Route every concierge message to the real backend agent instead of frontend keyword matching or hardcoded product replies.
-- Preserve the existing provider-neutral LLM, tool registry, permission, and approval architecture; never expose deterministic mock answers to customers.
-- Persist the agent conversation inside each API session so follow-up messages remain conversational.
-- Keep tool calls, provider errors, approval metadata, and orchestration details out of the end-user chat transcript.
-- Use natural final assistant responses from the configured Groq/Google provider, with an honest unavailable state when the hosted provider is not configured.
-- Replace the prior AI/SaaS landing pages with a real responsive furniture e-commerce dashboard inspired by the supplied Dribbble Furniture Marketplace shot: warm neutral canvas, product-first hierarchy, immersive furniture photography, room browsing, collection filters, wishlist, bag, product details, mobile bottom navigation, and a secondary style assistant.
-- Keep the existing live agent backend intact and surface its real conversation through the style assistant; do not show implementation details or mock AI responses.
+- Keep the real product catalogue from `frontend/src/data/demoData.js` visible and searchable.
+- Preserve product detail, wishlist, bag, checkout, filtering, category browsing, and responsive mobile navigation.
+- Surface the live backend concierge through the assistant drawer using the existing agent session, conversation, tool, and approval APIs.
+- Make order-creating actions approval-gated and explain unavailable AI-provider states honestly.
+- Provide a home experience that explains agentic commerce: agents understand intent, take the next action, and learn from outcomes.
+- Provide an AI dashboard showing conversations, AI-assisted revenue, resolution rate, inventory signals, agent performance, and recent workflows.
+- Keep the app’s warm editorial product-marketplace visual language: paper canvas, sage intelligence cues, terracotta action cues, rounded product imagery, and compact commerce metadata.
 
 ## Implementation approach
 
-- Extend `LLMAgentRunner.run` to accept an existing `AgentConversation` while preserving its current call signature for tests and other callers.
-- Store the conversation object in `backend/app/api/agent.py` session state and update it after normal turns and approval resumes.
-- Keep API responses compatible, but let the frontend render only the public `response` field and map non-public workflow states to friendly copy.
-- Use a responsive React storefront in `frontend/src/App.jsx` with a fixed desktop sidebar, sticky search topbar, warm editorial welcome hero, room cards, furniture product grid, filters/search, functional product modal, cart drawer, wishlist state, assistant drawer, and mobile bottom navigation.
-- Use curated furniture photography from Unsplash with rounded image cards, warm sage/terracotta accents, compact commerce metadata, and responsive touch-friendly controls.
-- Validate with backend pytest, frontend lint/build, and the running FastAPI preview.
+- `frontend/src/App.jsx` owns the responsive shell, product catalogue, product interactions, assistant drawer, checkout flow, and dashboard view.
+- `frontend/src/data/demoData.js` remains the source of demo product records and verified image URLs.
+- `frontend/src/api/agentClient.js` remains the only frontend boundary for live agent sessions, chat, and approval resumes.
+- `backend/app/api/agent.py` and the provider-neutral LLM/tool architecture remain intact.
+- `frontend/src/index.css` contains the shared paper/sage/terracotta design tokens, marketplace layout, responsive behavior, assistant drawer, and dashboard styling.
+- Vite accepts the public sandbox preview host through `server.allowedHosts`.
 
 ## Design direction
 
-- **Movement:** minimal furniture marketplace / warm editorial product catalog.
-- **Core principles:** product-first, calm, tactile, and immediately shoppable.
-- **Color philosophy:** bone paper and warm white make photography feel at home; sage communicates calm and terracotta provides a human purchase/assistant signal.
-- **Layout paradigm:** app-like desktop shell with sidebar + sticky toolbar, then a full-width feature card, room discovery, and a dense catalog grid.
-- **Signature elements:** rounded furniture photography, sage feature panel, compact product badges, floating quick-view affordances, and a terracotta assistant signal.
-- **Interaction philosophy:** browsing should feel effortless: filter, search, save, inspect, add to bag, and ask for help without leaving the collection.
-- **Animation:** image scale on hover, quick-view reveal, drawer/modal transitions, smooth anchor scrolling, horizontal room scroller on mobile, and reduced-motion support.
-- **Typography:** DM Sans for the commerce interface with Playfair Display italic used sparingly for editorial warmth.
-- **Brand essence:** Nook is considered furniture for everyday rituals. Personality: warm, observant, quietly useful.
-- **Brand voice:** “Make room for better living.” / “Furniture with a point of view, chosen for the way you actually live.”
-- **Wordmark:** a compact rounded lowercase n mark beside the Nook wordmark.
-- **Signature color:** sage green for the seasonal edit, with terracotta for saved/helpful actions.
-
-## Project structure
-
-- `backend/app/llm/`: provider-neutral reasoning and conversation models.
-- `backend/app/api/agent.py`: session lifecycle and public agent routes.
-- `frontend/src/App.jsx`: storefront, concierge UI, and public response presentation.
-- `frontend/src/data/demoData.js`: catalog presentation data and existing imagery.
-- `frontend/src/index.css`: visual system, hero, card, drawer, and responsive behavior.
+- **Movement:** warm editorial commerce workspace with an operations-console layer.
+- **Core principles:** product-first, useful, calm, and agent-aware.
+- **Color philosophy:** bone paper and warm white keep the catalogue tactile; sage signals intelligence and health; terracotta marks human attention and next actions.
+- **Layout paradigm:** fixed browse rail plus sticky search bar; home narrative above the catalogue; dashboard uses metric cards and workflow panels.
+- **Signature elements:** rounded product imagery, compact catalogue metadata, the terracotta AI concierge signal, and agent workflow cards.
+- **Brand essence:** Nook helps people and commerce teams make better decisions together with useful AI agents.
