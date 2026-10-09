@@ -148,7 +148,7 @@ class OpenAIProvider(LLMProvider):
 
         tool_calls: list[dict[str, Any]] = []
 
-        for item in response.output:
+        for item in response.output or []:
             if item.type != "function_call":
                 continue
 
