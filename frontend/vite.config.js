@@ -6,5 +6,12 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     allowedHosts: ['4173-itn7rcxefatfesumqbthp-7e83371a.us1.manus.computer', 'localhost'],
+    proxy: {
+      '/agent': 'http://127.0.0.1:8000',
+      '/dashboard': 'http://127.0.0.1:8000',
+      '/products': 'http://127.0.0.1:8000',
+      '/orders': 'http://127.0.0.1:8000',
+      '/auth': 'http://127.0.0.1:8000',
+    },
   },
 })

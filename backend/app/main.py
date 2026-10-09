@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.agent import router as agent_router
 from app.api.auth import router as auth_router
+from app.api.dashboard import router as dashboard_router
 from app.api.orders import router as orders_router
 from app.database.connection import engine
 from app.database.models import Product
@@ -25,6 +26,7 @@ app = FastAPI(
 app.include_router(orders_router)
 app.include_router(agent_router)
 app.include_router(auth_router)
+app.include_router(dashboard_router)
 
 if (STATIC_DIR / "assets").is_dir():
     app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")

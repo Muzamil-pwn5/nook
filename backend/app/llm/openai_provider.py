@@ -29,7 +29,8 @@ class OpenAIProvider(LLMProvider):
                 "OPENAI_API_KEY is not configured."
             )
 
-        self.client = OpenAI(api_key=api_key)
+        base_url = os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL")
+        self.client = OpenAI(api_key=api_key, base_url=base_url)
 
         self.model = model or os.getenv(
             "OPENAI_MODEL",

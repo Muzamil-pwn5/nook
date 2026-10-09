@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
@@ -43,6 +44,13 @@ def get_llm_agent() -> LLMAgentRunner:
 sessions: dict[str, dict] = {}
 
 
+def record_event(session: dict, event_type: str, label: str) -> None:
+    now = datetime.now(timezone.utc)
+    session["last_activity"] = now
+    session["events"].append({"type": event_type, "label": label, "timestamp": now})
+    session["events"] = session["events"][-50:]
+
+
 class CreateSessionResponse(BaseModel):
     session_id: str
 
@@ -84,6 +92,10 @@ def create_session():
     sessions[session_id] = {
         "pending_approvals": {},
         "conversation": AgentConversation(),
+        "created_at": datetime.now(timezone.utc),
+        "last_activity": datetime.now(timezone.utc),
+        "message_count": 0,
+        "events": [],
     }
 
     return {
@@ -102,6 +114,8 @@ def chat_with_agent(
     session = get_session(
         request.session_id
     )
+    session["message_count"] += 1
+    record_event(session, "conversation", "Shopper conversation started")
 
     try:
         result = get_llm_agent().run(
@@ -123,6 +137,11 @@ def chat_with_agent(
                     "pending_action"
                 ],
             }
+            record_event(
+                session,
+                "approval",
+                f"Approval requested for {result['pending_action']['tool_name']}",
+            )
 
             return {
                 "agent": "llm",
@@ -151,10 +170,10 @@ def chat_with_agent(
             "session_id": request.session_id,
             "success": False,
             "type": "provider_unavailable",
-            "response": (
-                "The concierge is not connected to a live AI provider yet. "
-                "Please configure Groq or Google Gemini and try again."
-            ),
+                "response": (
+                    "The concierge is not connected to a live AI provider yet. "
+                    "Please configure a supported provider (OpenAI, Groq, or Google Gemini) and try again."
+                ),
         }
 
 
@@ -188,6 +207,11 @@ def approve_order(
         )
 
     action = pending["pending_action"]
+    record_event(
+        session,
+        "approval",
+        f"Approval granted for {action['tool_name']}",
+    )
 
     result = get_llm_agent().resume_after_approval(
         conversation=pending["conversation"],
