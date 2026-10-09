@@ -1,4 +1,4 @@
-const image = (category, id) => `https://loremflickr.com/900/1100/${encodeURIComponent(category.toLowerCase())}?lock=${id}`;
+const image = (category, id) => `https://picsum.photos/seed/nook-${encodeURIComponent(category.toLowerCase())}-${id}/900/1100`;
 
 const CATEGORY_DEFS = [
   ["Clothing", "shirt", ["Uniqlo", "COS", "Everlane", "Arket", "Levi's", "Mango", "Zara", "Massimo Dutti", "J.Crew", "Gap"], ["Organic cotton", "Washed linen", "Merino wool", "Tencel twill"]],
@@ -26,7 +26,7 @@ export const DEMO_PRODUCTS = CATEGORY_DEFS.flatMap(([category, singular, brands,
   const sizes = CLOTHING.has(category) ? ["XS", "S", "M", "L", "XL"] : SHOES.has(category) ? ["36", "37", "38", "39", "40", "41", "42"] : ["One size"];
   const priceBase = category === "Jewellery" ? 120 : category === "Perfume" ? 96 : category === "Beauty" ? 48 : SHOES.has(category) ? 165 : 88;
   return {
-    id, name: `${brand} ${singular[0].toUpperCase() + singular.slice(1)} ${String(index + 1).padStart(2, "0")}`, brand, category, price: priceBase + ((index * 17 + categoryIndex * 13) % 180), stock_quantity: 6 + ((index * 3 + categoryIndex) % 28), material: materials[index % materials.length], edition: `${brand} / ${category}`, tagline: `${color} ${singular} from ${brand}.`, description: `${brand}'s ${singular} in ${color.toLowerCase()}, made in ${materials[index % materials.length].toLowerCase()} for everyday wear.`, image: image(category, id), color, colors: [color, COLORS[(index + 3) % COLORS.length]], sizes
+    id, name: `${brand} ${color} ${materials[index % materials.length].toLowerCase()} ${singular}`, brand, category, price: priceBase + ((index * 17 + categoryIndex * 13) % 180), stock_quantity: 6 + ((index * 3 + categoryIndex) % 28), material: materials[index % materials.length], edition: `${brand} / ${category}`, tagline: `${color} ${singular} from ${brand}.`, description: `${brand}'s ${singular} in ${color.toLowerCase()}, made in ${materials[index % materials.length].toLowerCase()} for everyday wear.`, image: image(category, id), color, colors: [color, COLORS[(index + 3) % COLORS.length]], sizes
   };
 }));
 
