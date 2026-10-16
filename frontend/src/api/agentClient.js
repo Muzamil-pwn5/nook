@@ -21,5 +21,14 @@ export const agentClient = {
   },
   async approveOrder(sessionId, approvalId) {
     return request(`/agent/session/${sessionId}/approve-order/${approvalId}`, { method: "POST" });
+  },
+  async speak(text) {
+    const response = await fetch(`${API_BASE_URL}/agent/speak`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!response.ok) throw new Error(`Speech request failed (${response.status})`);
+    return response.blob();
   }
 };

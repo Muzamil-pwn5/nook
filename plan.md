@@ -23,6 +23,13 @@ Nook is an agentic commerce workspace, not a customer-service landing page. It c
 - `frontend/src/index.css` contains the shared paper/sage/terracotta design tokens, marketplace layout, responsive behavior, assistant drawer, and dashboard styling.
 - Vite accepts the public sandbox preview host through `server.allowedHosts`.
 
+## Agent workspace direction
+
+- The assistant is presented as an execution workspace, with live tool-event history, explicit approval pauses, and honest runtime states rather than a generic chat transcript.
+- Voice input uses browser speech recognition when supported, while voice output is routed through the backend `/agent/speak` boundary so the ElevenLabs key never reaches the browser.
+- ElevenLabs is optional at runtime: the transcript and agent workflow remain usable when audio is not configured.
+- Canva is reserved for explicit creative assets or brand work; the application UI itself remains source-controlled in the repository and does not replicate Canva template internals.
+
 ## Design direction
 
 - **Movement:** warm editorial commerce workspace with an operations-console layer.

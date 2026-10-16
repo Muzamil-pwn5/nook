@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { agentClient } from "./api/agentClient";
 import { dashboardClient } from "./api/dashboardClient";
 import { CATEGORY_NAMES, DEMO_PRODUCTS } from "./data/demoData";
@@ -60,13 +60,118 @@ function renderAgentText(text) {
 }
 
 function Assistant({ open, onClose }) {
-  const [sessionId, setSessionId] = useState(null); const [pendingApproval, setPendingApproval] = useState(null); const [input, setInput] = useState(""); const [busy, setBusy] = useState(false); const [messages, setMessages] = useState([{ id: 1, role: "assistant", text: "Tell me about your space. I can help you find a piece that feels right." }]);
-  useEffect(() => { if (!open) return; let active = true; agentClient.createSession().then((session) => active && setSessionId(session.session_id)).catch(() => {}); return () => { active = false; }; }, [open]);
-  if (!open) return null;
-  const send = async () => { const text = input.trim(); if (!text || busy) return; setInput(""); setMessages((items) => [...items, { id: Date.now(), role: "user", text }]); setBusy(true); try { if (!sessionId) throw new Error("offline"); const result = await agentClient.chat(sessionId, text); if (result?.type === "approval_required") setPendingApproval({ sessionId, approvalId: result.approval_id }); setMessages((items) => [...items, { id: Date.now() + 1, role: "assistant", text: cleanAgentResponse(result?.response) }]); } catch { setMessages((items) => [...items, { id: Date.now() + 1, role: "assistant", text: "I’m reconnecting to the assistant. Try again in a moment." }]); } finally { setBusy(false); } }; const approve = async () => { if (!pendingApproval || busy) return; setBusy(true); try { const result = await agentClient.approveOrder(pendingApproval.sessionId, pendingApproval.approvalId); setPendingApproval(null); setMessages((items) => [...items, { id: Date.now() + 1, role: "assistant", text: cleanAgentResponse(result?.response || "The approved order action is complete.") }]); } catch { setMessages((items) => [...items, { id: Date.now() + 1, role: "assistant", text: "I could not complete that approval. Please review the bag and try again." }]); } finally { setBusy(false); } };
-  return <div className="assistant-wrap"><button className="modal-backdrop" onClick={onClose} aria-label="Close assistant" /><aside className="assistant-drawer"><div className="drawer-header"><div><p className="eyebrow eyebrow-green">PERSONAL EDIT</p><h2>Find your feeling.</h2></div><button className="modal-close" onClick={onClose}><Icon name="close" /></button></div><p className="assistant-intro">Ask about colour, category, budget, or availability.</p><div className="assistant-messages">{messages.map((message) => <div className={`assistant-message ${message.role}`} key={message.id}><span>{message.role === "assistant" ? "n" : "you"}</span><div className="assistant-richtext">{renderAgentText(message.text)}</div></div>)}{busy && <div className="assistant-message assistant"><span>n</span><p className="typing"><i /><i /><i /></p></div>}</div><div className="assistant-approval">{pendingApproval && <button className="approval-button" onClick={approve} disabled={busy}>Approve order</button>}</div><div className="assistant-suggestions"><button onClick={() => setInput("Show me accessories under $100")}>Under $100</button><button onClick={() => setInput("Find something in black")}>In black</button></div><form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); send(); }}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask the agent…" /><button disabled={!input.trim() || busy} aria-label="Send"><Icon name="arrow" size={16} /></button></form></aside></div>;
-}
+  const [sessionId, setSessionId] = useState(null);
+  const [pendingApproval, setPendingApproval] = useState(null);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(true);
+  const [speechSupported] = useState(() => typeof window !== "undefined" && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition));
+  const recognitionRef = useRef(null);
+  const [messages, setMessages] = useState([{ id: 1, role: "assistant", text: "Tell me the outcome you want. I can search the catalogue, verify inventory, and prepare the next action with approval." }]);
+  const [activity, setActivity] = useState([{ id: 1, label: "Session ready", detail: "Waiting for your intent", state: "ready" }]);
 
+  useEffect(() => {
+    if (!open) return undefined;
+    let active = true;
+    agentClient.createSession().then((session) => {
+      if (!active) return;
+      setSessionId(session.session_id);
+      setActivity((items) => [{ id: Date.now(), label: "Agent session created", detail: `Session ${session.session_id.slice(0, 8)}`, state: "done" }, ...items]);
+    }).catch(() => setActivity([{ id: Date.now(), label: "Offline mode", detail: "Connect the agent runtime to continue", state: "warning" }]));
+    return () => { active = false; recognitionRef.current?.stop?.(); };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || typeof window === "undefined") return undefined;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return undefined;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => {
+      setIsListening(false);
+      setActivity((items) => [{ id: Date.now(), label: "Voice input unavailable", detail: "Try typing or check microphone permission", state: "warning" }, ...items].slice(0, 5));
+    };
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results).map((result) => result[0].transcript).join(" ").trim();
+      if (transcript) setInput(transcript);
+    };
+    recognitionRef.current = recognition;
+    return () => { recognition.stop(); recognitionRef.current = null; };
+  }, [open]);
+
+  if (!open) return null;
+  const speak = async (text) => {
+    if (!audioEnabled || !text) return;
+    try {
+      const blob = await agentClient.speak(text);
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => URL.revokeObjectURL(url);
+      await audio.play();
+    } catch {
+      setActivity((items) => [{ id: Date.now(), label: "Voice output unavailable", detail: "ElevenLabs is not connected; the transcript is still available", state: "warning" }, ...items].slice(0, 5));
+    }
+  };
+  const toggleListening = () => {
+    if (!recognitionRef.current) return;
+    if (isListening) recognitionRef.current.stop();
+    else recognitionRef.current.start();
+  };
+  const addToolEvents = (toolEvents = []) => {
+    if (!toolEvents.length) return;
+    setActivity((items) => [
+      ...toolEvents.map((event, index) => ({
+        id: `${Date.now()}-${index}`,
+        label: event.requires_approval ? "Human approval requested" : `${event.tool_name} completed`,
+        detail: event.requires_approval ? "Action paused before mutation" : "Verified by the agent tool layer",
+        state: event.requires_approval ? "waiting" : event.success ? "done" : "warning",
+      })),
+      ...items,
+    ].slice(0, 6));
+  };
+  const send = async () => {
+    const text = input.trim();
+    if (!text || busy) return;
+    setInput("");
+    setMessages((items) => [...items, { id: Date.now(), role: "user", text }]);
+    setActivity((items) => [{ id: Date.now(), label: "Planning next action", detail: "The agent is interpreting intent", state: "active" }, ...items].slice(0, 6));
+    setBusy(true);
+    try {
+      if (!sessionId) throw new Error("offline");
+      const result = await agentClient.chat(sessionId, text);
+      addToolEvents(result?.tool_events);
+      if (result?.type === "approval_required") setPendingApproval({ sessionId, approvalId: result.approval_id });
+      const responseText = cleanAgentResponse(result?.response);
+      setMessages((items) => [...items, { id: Date.now() + 1, role: "assistant", text: responseText }]);
+      speak(responseText);
+    } catch {
+      const responseText = "I’m reconnecting to the agent runtime. Try again in a moment.";
+      setMessages((items) => [...items, { id: Date.now() + 1, role: "assistant", text: responseText }]);
+      setActivity((items) => [{ id: Date.now(), label: "Runtime unavailable", detail: "No action was taken", state: "warning" }, ...items].slice(0, 6));
+    } finally { setBusy(false); }
+  };
+  const approve = async () => {
+    if (!pendingApproval || busy) return;
+    setBusy(true);
+    setActivity((items) => [{ id: Date.now(), label: "Approval received", detail: "Executing the requested order action", state: "active" }, ...items].slice(0, 6));
+    try {
+      const result = await agentClient.approveOrder(pendingApproval.sessionId, pendingApproval.approvalId);
+      setPendingApproval(null);
+      addToolEvents(result?.tool_events);
+      const responseText = cleanAgentResponse(result?.response || "The approved order action is complete.");
+      setMessages((items) => [...items, { id: Date.now() + 1, role: "assistant", text: responseText }]);
+      speak(responseText);
+    } catch {
+      setMessages((items) => [...items, { id: Date.now() + 1, role: "assistant", text: "I could not complete that approval. No order was confirmed." }]);
+    } finally { setBusy(false); }
+  };
+  return <div className="assistant-wrap"><button className="modal-backdrop" onClick={onClose} aria-label="Close assistant" /><aside className="assistant-drawer"><div className="drawer-header"><div><p className="eyebrow eyebrow-green">NOOK AGENT WORKSPACE</p><h2>Tell it what to do.</h2></div><div className="assistant-header-actions"><button className={`voice-toggle ${audioEnabled ? "is-on" : ""}`} onClick={() => setAudioEnabled((value) => !value)} aria-label={audioEnabled ? "Mute agent voice" : "Enable agent voice"}>{audioEnabled ? "Voice on" : "Voice off"}</button><button className="modal-close" onClick={onClose}><Icon name="close" /></button></div></div><p className="assistant-intro">Nook turns intent into verified actions across catalogue, inventory, and orders.</p><div className="assistant-automation"><div className="automation-heading"><span>LIVE EXECUTION</span><small>{sessionId ? "Connected" : "Connecting"}</small></div>{activity.slice(0, 4).map((item) => <div className="automation-step" key={item.id}><i className={`automation-dot ${item.state}`} /><div><strong>{item.label}</strong><span>{item.detail}</span></div></div>)}</div><div className="assistant-messages">{messages.map((message) => <div className={`assistant-message ${message.role}`} key={message.id}><span>{message.role === "assistant" ? "n" : "you"}</span><div className="assistant-richtext">{renderAgentText(message.text)}</div></div>)}{busy && <div className="assistant-message assistant"><span>n</span><p className="typing"><i /><i /><i /></p></div>}</div><div className="assistant-approval">{pendingApproval && <div className="approval-card"><span>Approval required</span><p>Nook prepared an order action but will not mutate commerce data until you approve it.</p><button className="approval-button" onClick={approve} disabled={busy}>Approve action</button></div>}</div><div className="assistant-suggestions"><button onClick={() => setInput("Find the best products under $100")}>Find under $100</button><button onClick={() => setInput("Audit low-stock products")}>Audit stock</button></div><form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); send(); }}><button type="button" className={`mic-button ${isListening ? "is-listening" : ""}`} onClick={toggleListening} disabled={!speechSupported} aria-label={speechSupported ? "Talk to Nook" : "Voice input is not supported in this browser"}>{isListening ? "●" : "⌁"}</button><input value={input} onChange={(event) => setInput(event.target.value)} placeholder={speechSupported ? "Say or type an outcome…" : "Type an outcome…"} /><button disabled={!input.trim() || busy} aria-label="Send"><Icon name="arrow" size={16} /></button></form></aside></div>;
+}
 
 function Dashboard() {
   const [data, setData] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState("");
@@ -81,7 +186,7 @@ function App() {
   const [active, setActive] = useState("home"); const [query, setQuery] = useState(""); const [category, setCategory] = useState("All pieces"); const [brandFilter, setBrandFilter] = useState("All brands"); const [minPrice, setMinPrice] = useState(""); const [maxPrice, setMaxPrice] = useState(""); const [liked, setLiked] = useState([]); const [cart, setCart] = useState([]); const [selected, setSelected] = useState(null); const [assistantOpen, setAssistantOpen] = useState(false); const [cartOpen, setCartOpen] = useState(false); const [checkoutOpen, setCheckoutOpen] = useState(false);
   const brandOptions = useMemo(() => ["All brands", ...new Set(products.map((product) => product.brand).filter(Boolean).sort())], []); const filtered = useMemo(() => products.filter((product) => { const matchesCategory = category === "All pieces" || product.category === category; const matchesBrand = brandFilter === "All brands" || product.brand === brandFilter; const matchesMin = !minPrice || product.price >= Number(minPrice); const matchesMax = !maxPrice || product.price <= Number(maxPrice); const haystack = `${product.name} ${product.category} ${product.color} ${product.material} ${product.brand}`.toLowerCase(); return matchesCategory && matchesBrand && matchesMin && matchesMax && (!query.trim() || haystack.includes(query.toLowerCase().trim())); }), [category, brandFilter, minPrice, maxPrice, query]); const trending = products.filter((product) => product.id % 7 === 1).slice(0, 8); const visibleProducts = filtered.slice(0, 48);
   const addToBag = (product) => setCart((items) => [...items, product]); const toggleLike = (id) => setLiked((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id]); const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); const openExplore = () => { setActive("explore"); setTimeout(() => scrollTo("catalog"), 0); };
-  return <div id="top" className="storefront"><Sidebar active={active} setActive={(value) => { setActive(value); if (value === "explore") setTimeout(() => scrollTo("catalog"), 0); else scrollTo("top"); }} category={category} setCategory={setCategory} /><div className="main-shell"><Header query={query} setQuery={setQuery} cartCount={cart.length} wishlistCount={liked.length} onSearch={openExplore} /><main>{active === "dashboard" ? <Dashboard /> : <><section className="welcome-section"><div><p className="eyebrow">NOOK AGENTIC COMMERCE</p><h1>Shop with an<br /><em>intelligent edge.</em></h1><p className="welcome-copy">A product catalogue powered by agents that understand intent, inventory, and the next best action.</p></div><button className="bag-pill" onClick={() => setCartOpen(true)}><Icon name="bag" size={16} /> {cart.length === 0 ? "Bag" : `${cart.length} ${cart.length === 1 ? "piece" : "pieces"}`} <Icon name="arrow" size={14} /></button></section><section className="hero-card"><div className="hero-card-copy"><p className="eyebrow eyebrow-green">AGENTIC AI FOR E-COMMERCE</p><h2>From intent<br /><em>to checkout.</em></h2><p>Let your AI concierge find the right products, answer questions, and prepare every order with approval built in.</p><button className="dark-button" onClick={openExplore}>Explore all products <Icon name="arrow" size={15} /></button></div><div className="hero-card-image"><img src={products[3]?.image} alt="New collection" /><span className="hero-floating-note">2026<br /><b>New edit</b></span></div></section>{active === "home" && <section className="agentic-brief"><div><p className="eyebrow eyebrow-green">WHY NOOK</p><h2>One commerce brain.<br /><em>Many useful agents.</em></h2><p>Agents work together across discovery, inventory, and operations so every shopper gets a more relevant path to purchase.</p></div><div className="agentic-pillars"><article><span>01</span><strong>Understand intent</strong><p>Turn natural language into a clear shopping brief.</p></article><article><span>02</span><strong>Take the next action</strong><p>Search, compare, reserve, and prepare orders with guardrails.</p></article><article><span>03</span><strong>Learn from outcomes</strong><p>Use every conversation to improve recommendations and operations.</p></article></div></section>}{active === "home" && !query ? <section className="catalog-section trending-section"><div className="section-heading catalog-heading"><div><p className="eyebrow">TRENDING NOW</p><h2>Worth a closer look.</h2></div><button className="text-link" onClick={openExplore}>View all <Icon name="arrow" size={14} /></button></div><div className="product-grid">{trending.map((product) => <ProductCard key={product.id} product={product} liked={liked.includes(product.id)} onLike={toggleLike} onAdd={addToBag} onSelect={setSelected} />)}</div></section> : <section id="catalog" className="catalog-section"><div className="section-heading catalog-heading"><div><p className="eyebrow">ALL PRODUCTS</p><h2>{category === "All pieces" ? "The full collection." : category}</h2></div><span className="result-count">{filtered.length} products</span></div><div className="catalog-toolbar"><div className="category-tabs">{categories.map((item) => <button className={category === item ? "is-active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><div className="advanced-filters"><select value={brandFilter} onChange={(event) => setBrandFilter(event.target.value)} aria-label="Filter by brand">{brandOptions.map((brand) => <option key={brand}>{brand}</option>)}</select><input type="number" min="0" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="Min $" aria-label="Minimum price" /><input type="number" min="0" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} placeholder="Max $" aria-label="Maximum price" /></div></div><div className="product-grid">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} liked={liked.includes(product.id)} onLike={toggleLike} onAdd={addToBag} onSelect={setSelected} />)}</div>{filtered.length === 0 && <div className="no-results"><h3>No products found.</h3><button className="text-link" onClick={() => { setQuery(""); setCategory("All pieces"); }}>Clear filters <Icon name="arrow" size={14} /></button></div>}</section>}</>}</main><footer className="store-footer"><Logo /><span>Considered pieces for everyday rituals.</span><span>© 2026 Nook Home</span></footer></div><button className="assistant-fab" onClick={() => setAssistantOpen(true)} aria-label="Chat with AI agent"><span className="assistant-fab-icon">✦</span><span className="assistant-fab-label">Chat with AI agent</span></button><nav className="mobile-bottom-nav"><button className={active === "home" ? "is-active" : ""} onClick={() => { setActive("home"); scrollTo("top"); }}><Icon name="home" size={19} /><small>Home</small></button><button className={active === "explore" ? "is-active" : ""} onClick={openExplore}><Icon name="grid" size={19} /><small>Explore</small></button><button onClick={() => setCartOpen(true)}><Icon name="bag" size={19} /><small>Bag {cart.length > 0 && `(${cart.length})`}</small></button></nav>{selected && <ProductModal product={selected} onClose={() => setSelected(null)} onAdd={addToBag} />}{cartOpen && <CartDrawer cart={cart} onClose={() => setCartOpen(false)} onRemove={(index) => setCart((items) => items.filter((_, itemIndex) => itemIndex !== index))} onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} />}<Assistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />{checkoutOpen && <CheckoutDrawer cart={cart} onClose={() => setCheckoutOpen(false)} />}</div>;
+  return <div id="top" className="storefront"><Sidebar active={active} setActive={(value) => { setActive(value); if (value === "explore") setTimeout(() => scrollTo("catalog"), 0); else scrollTo("top"); }} category={category} setCategory={setCategory} /><div className="main-shell"><Header query={query} setQuery={setQuery} cartCount={cart.length} wishlistCount={liked.length} onSearch={openExplore} /><main>{active === "dashboard" ? <Dashboard /> : <><section className="welcome-section"><div><p className="eyebrow">NOOK AGENTIC COMMERCE</p><h1>Shop with an<br /><em>intelligent edge.</em></h1><p className="welcome-copy">A product catalogue powered by agents that understand intent, inventory, and the next best action.</p></div><button className="bag-pill" onClick={() => setCartOpen(true)}><Icon name="bag" size={16} /> {cart.length === 0 ? "Bag" : `${cart.length} ${cart.length === 1 ? "piece" : "pieces"}`} <Icon name="arrow" size={14} /></button></section><section className="hero-card"><div className="hero-card-copy"><p className="eyebrow eyebrow-green">AGENTIC AI FOR E-COMMERCE</p><h2>From intent<br /><em>to checkout.</em></h2><p>Let your AI concierge find the right products, answer questions, and prepare every order with approval built in.</p><button className="dark-button" onClick={openExplore}>Explore all products <Icon name="arrow" size={15} /></button></div><div className="hero-card-image"><img src={products[3]?.image} alt="New collection" /><span className="hero-floating-note">2026<br /><b>New edit</b></span></div></section>{active === "home" && <section className="agentic-brief"><div><p className="eyebrow eyebrow-green">WHY NOOK</p><h2>One commerce brain.<br /><em>Many useful agents.</em></h2><p>Agents work together across discovery, inventory, and operations so every shopper gets a more relevant path to purchase.</p></div><div className="agentic-pillars"><article><span>01</span><strong>Understand intent</strong><p>Turn natural language into a clear shopping brief.</p></article><article><span>02</span><strong>Take the next action</strong><p>Search, compare, reserve, and prepare orders with guardrails.</p></article><article><span>03</span><strong>Learn from outcomes</strong><p>Use every conversation to improve recommendations and operations.</p></article></div></section>}{active === "home" && !query ? <section className="catalog-section trending-section"><div className="section-heading catalog-heading"><div><p className="eyebrow">TRENDING NOW</p><h2>Worth a closer look.</h2></div><button className="text-link" onClick={openExplore}>View all <Icon name="arrow" size={14} /></button></div><div className="product-grid">{trending.map((product) => <ProductCard key={product.id} product={product} liked={liked.includes(product.id)} onLike={toggleLike} onAdd={addToBag} onSelect={setSelected} />)}</div></section> : <section id="catalog" className="catalog-section"><div className="section-heading catalog-heading"><div><p className="eyebrow">ALL PRODUCTS</p><h2>{category === "All pieces" ? "The full collection." : category}</h2></div><span className="result-count">{filtered.length} products</span></div><div className="catalog-toolbar"><div className="category-tabs">{categories.map((item) => <button className={category === item ? "is-active" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><div className="advanced-filters"><select value={brandFilter} onChange={(event) => setBrandFilter(event.target.value)} aria-label="Filter by brand">{brandOptions.map((brand) => <option key={brand}>{brand}</option>)}</select><input type="number" min="0" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="Min $" aria-label="Minimum price" /><input type="number" min="0" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} placeholder="Max $" aria-label="Maximum price" /></div></div><div className="product-grid">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} liked={liked.includes(product.id)} onLike={toggleLike} onAdd={addToBag} onSelect={setSelected} />)}</div>{filtered.length === 0 && <div className="no-results"><h3>No products found.</h3><button className="text-link" onClick={() => { setQuery(""); setCategory("All pieces"); }}>Clear filters <Icon name="arrow" size={14} /></button></div>}</section>}</>}</main><footer className="store-footer"><Logo /><span>Considered pieces for everyday rituals.</span><span>© 2026 Nook Home</span></footer></div><button className="assistant-fab" onClick={() => setAssistantOpen(true)} aria-label="Open Nook agent"><span className="assistant-fab-icon">✦</span><span className="assistant-fab-label">Talk to Nook</span></button><nav className="mobile-bottom-nav"><button className={active === "home" ? "is-active" : ""} onClick={() => { setActive("home"); scrollTo("top"); }}><Icon name="home" size={19} /><small>Home</small></button><button className={active === "explore" ? "is-active" : ""} onClick={openExplore}><Icon name="grid" size={19} /><small>Explore</small></button><button onClick={() => setCartOpen(true)}><Icon name="bag" size={19} /><small>Bag {cart.length > 0 && `(${cart.length})`}</small></button></nav>{selected && <ProductModal product={selected} onClose={() => setSelected(null)} onAdd={addToBag} />}{cartOpen && <CartDrawer cart={cart} onClose={() => setCartOpen(false)} onRemove={(index) => setCart((items) => items.filter((_, itemIndex) => itemIndex !== index))} onCheckout={() => { setCartOpen(false); setCheckoutOpen(true); }} />}<Assistant open={assistantOpen} onClose={() => setAssistantOpen(false)} />{checkoutOpen && <CheckoutDrawer cart={cart} onClose={() => setCheckoutOpen(false)} />}</div>;
 }
 
 export default App;

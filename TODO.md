@@ -23,3 +23,5 @@
 - **Immersive premium storefront experience** — The homepage is not a dashboard: it leads with an editorial full-viewport hero, premium brand typography, a hover-responsive hero object, scroll-triggered reveal animations, a point-of-view statement, marquee motion, a curated featured collection, and a concierge CTA. Motion respects `prefers-reduced-motion` and the experience remains responsive on mobile.
 
 - **Expanded image-led catalogue** — The catalogue contains at least ten distinct fake products, each with its own product image asset, category, material, edition, tagline, description, price, stock signal, detail modal, and add-to-bag interaction. Product filtering, visual hover states, and the catalogue route work without requiring a live backend.
+
+- **Voice-enabled automation workspace** — The assistant drawer presents a live execution timeline for agent tool calls and approval pauses, accepts spoken intent through supported browser speech recognition, and can read agent responses aloud through the backend ElevenLabs speech boundary without exposing provider credentials to the browser.

@@ -111,6 +111,8 @@ class LLMAgentRunner:
         Continue an existing agent conversation.
         """
 
+        tool_events: list[dict[str, Any]] = []
+
         for iteration in range(self.max_iterations):
             response = self.provider.generate(
                 system_prompt=CUSTOMER_OPERATIONS_SYSTEM_PROMPT,
@@ -128,6 +130,7 @@ class LLMAgentRunner:
                     "type": "final_response",
                     "response": response.text,
                     "iterations": iteration + 1,
+                    "tool_events": tool_events,
                     "conversation": conversation,
                 }
 
@@ -145,6 +148,13 @@ class LLMAgentRunner:
 
             for tool_result in tool_results:
                 result = tool_result["result"]
+                tool_events.append(
+                    {
+                        "tool_name": tool_result["tool_name"],
+                        "success": bool(result.get("success")) if isinstance(result, dict) else False,
+                        "requires_approval": bool(result.get("requires_approval")) if isinstance(result, dict) else False,
+                    }
+                )
 
                 if (
                     isinstance(result, dict)
@@ -171,6 +181,7 @@ class LLMAgentRunner:
                             ),
                             "risk": result.get("risk"),
                         },
+                        "tool_events": tool_events,
                         "conversation": conversation,
                     }
 
@@ -191,5 +202,6 @@ class LLMAgentRunner:
                 "the allowed number of reasoning steps."
             ),
             "iterations": self.max_iterations,
+            "tool_events": tool_events,
             "conversation": conversation,
         }
