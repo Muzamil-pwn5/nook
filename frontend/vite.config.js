@@ -5,7 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0',
-    allowedHosts: ['4173-itn7rcxefatfesumqbthp-7e83371a.us1.manus.computer', 'localhost'],
+    allowedHosts: true,
     proxy: {
       '/agent': 'http://127.0.0.1:8000',
       '/dashboard': 'http://127.0.0.1:8000',

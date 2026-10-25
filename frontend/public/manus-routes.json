@@ -1,1 +1,1 @@
-{"routes":[{"path":"/","title":"Nook Agentic Commerce"}]}
+{"routes":[{"path":"/","title":"Nook Agentic Commerce"},{"path":"/?workspace=owner","title":"Nook Owner Control Room"}]}

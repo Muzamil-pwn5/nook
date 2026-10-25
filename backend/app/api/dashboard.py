@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.agent import sessions
 from app.database.connection import engine
-from app.database.models import Order, Product
+from app.database.models import Order, OrderItem, Product
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -27,6 +27,7 @@ def dashboard_summary():
         inventory_units = db.scalar(select(func.coalesce(func.sum(Product.stock_quantity), 0))) or 0
         order_count = db.scalar(select(func.count(Order.id))) or 0
         revenue = db.scalar(select(func.coalesce(func.sum(Order.total_amount), 0))) or 0
+        products_sold = db.scalar(select(func.coalesce(func.sum(OrderItem.quantity), 0))) or 0
         status_rows = db.execute(select(Order.status, func.count(Order.id)).group_by(Order.status)).all()
         category_rows = db.execute(select(Product.category, func.count(Product.id)).group_by(Product.category).order_by(func.count(Product.id).desc())).all()
         recent_orders = db.execute(select(Order).order_by(Order.created_at.desc()).limit(8)).scalars().all()
@@ -64,6 +65,7 @@ def dashboard_summary():
             "inventory_units": int(inventory_units),
             "order_count": int(order_count),
             "revenue": float(revenue),
+            "units_sold": int(products_sold),
             "active_sessions": active_sessions,
             "message_count": message_count,
             "pending_approvals": pending_approvals,

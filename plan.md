@@ -38,3 +38,9 @@ Nook is an agentic commerce workspace, not a customer-service landing page. It c
 - **Layout paradigm:** fixed browse rail plus sticky search bar; home narrative above the catalogue; dashboard uses metric cards and workflow panels.
 - **Signature elements:** rounded product imagery, compact catalogue metadata, the terracotta AI concierge signal, and agent workflow cards.
 - **Brand essence:** Nook helps people and commerce teams make better decisions together with useful AI agents.
+
+## Workspace split
+
+- **Customer storefront:** a product-first shopping surface with a large demo catalogue, search and filters, product detail, wishlist, bag, checkout request flow, responsive navigation, and a customer concierge that accepts text and supported browser voice input.
+- **Owner control room:** a separate workspace state in the same shell with revenue, products sold, active AI sessions, inventory health, category mix, order pipeline, live workflow events, pending approvals, and an owner operations agent entry point.
+- **Shared execution model:** both agents use the same server-side session and tool boundary. Product discovery can stay conversational; order mutation remains approval-gated. If the backend is unavailable, the interface uses clearly labelled demo workspace data instead of claiming a live action occurred.
